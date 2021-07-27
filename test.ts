@@ -58,7 +58,7 @@ Deno.test("test2", async () => {
   // const final = await pipe.execute(Object.freeze(given));
   const final = await helpers.run(given, pipe);
 
-  assertObjectMatch(final.res, {
+  assertObjectMatch(final?.res, {
     body: {
       hello: "world",
     },
@@ -66,8 +66,7 @@ Deno.test("test2", async () => {
   });
 });
 
-/*
-Deno.test("test - reject", async () => {
+Deno.test("test - reject handler", async () => {
   const given = {
     req: {
       body: {},
@@ -96,13 +95,57 @@ Deno.test("test - reject", async () => {
     next({ ...ctx, res: { ...res, headers } });
   };
   pipe.use(corser);
-  const final = await pipe.execute(Object.freeze(given));
+  const final = await helpers.run(given, pipe, (e) => {
+    return { req: {}, res: {} };
+  });
 
-  assertObjectMatch(final.res, {
-    headers: { cors: "*", "x-stuff": true },
-    body: {
-      hello: "world",
+  assertObjectMatch(final?.res, {});
+});
+
+Deno.test("test - reject handler should not be called", async () => {
+  const given = {
+    req: {
+      body: { payload: "1" },
+      queryParams: {},
+    },
+    res: {},
+  };
+  type http = {
+    req: any;
+    res: any;
+  };
+  const pipe = create<http>();
+
+  pipe.use(helpers.toMiddleware(
+    (ctx: http) => {
+      try {
+        throw new Error("Error here");
+      } catch (e) {
+        console.log(e.message);
+        return ctx;
+      }
+    },
+  ));
+
+  const corser = (ctx: http, next: Function) => {
+    const res = ctx.res;
+    const headers = {
+      "cors": "*",
+      "x-stuff": true,
+    };
+    next({ ...ctx, res: { ...res, headers } });
+  };
+
+  pipe.use(corser);
+
+  const final = await helpers.run(given, pipe, (e) => {
+    return { req: {}, res: {} };
+  }) as http;
+
+  assertObjectMatch(final, {
+    req: { body: { payload: "1" } },
+    res: {
+      headers: { cors: "*" },
     },
   });
 });
-*/

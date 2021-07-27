@@ -1,5 +1,6 @@
 type None = undefined;
 type Maybe<T> = T | None;
+
 type Next<T> = (ctx: T) => Promise<T> | T;
 type Middleware<T> = (
   context: T,
@@ -17,22 +18,32 @@ const helpers = {
     (ctx: T, next: Next<T>) => {
       next(fn(ctx));
     },
-  run: async <T>(ctx: T, pipeline: Pipeline<T>) => {
-    let context = ctx;
-
-    const iter = pipeline.getIter();
-    while (true) {
-      const { middleware } = iter.next();
-      if (middleware) {
-        await middleware(context, (ctx: T) => {
-          context = ctx;
-          return context;
-        });
-      } else {
-        break;
+  run: async <T>(
+    ctx: T,
+    pipeline: Pipeline<T>,
+    errHandler?: (e: Error) => T | Promise<T> | void | Promise<void>,
+  ) => {
+    try {
+      let context = ctx;
+      const iter = pipeline.getIter();
+      while (true) {
+        const { middleware } = iter.next();
+        if (middleware) {
+          await middleware(context, (ctx: T) => {
+            context = ctx;
+            return context;
+          });
+        } else {
+          break;
+        }
       }
+      return context;
+    } catch (e) {
+      if (errHandler) {
+        return await errHandler(e);
+      }
+      throw e;
     }
-    return context;
   },
 };
 

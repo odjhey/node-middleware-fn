@@ -1,4 +1,7 @@
-import { assertEquals } from "https://deno.land/std@0.103.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertObjectMatch,
+} from "https://deno.land/std@0.103.0/testing/asserts.ts";
 
 Deno.test("test1", async () => {
   const given = 1;
@@ -15,7 +18,7 @@ Deno.test("test1", async () => {
   assertEquals(given + 10, final);
 });
 
-Deno.test("test1", async () => {
+Deno.test("test2", async () => {
   const given = {
     req: {
       body: {},
@@ -38,19 +41,24 @@ Deno.test("test1", async () => {
     next({ ...ctx, res: { ...res, headers } });
   };
 
-  pipe.handler((ctx: http) => {
-    const res = ctx.res;
-    const body = { hello: "world" };
-    return { ...ctx, res: { ...res, body } };
-  });
+  const { toMiddleware } = helpers;
+  pipe.use(toMiddleware(
+    (ctx: http) => {
+      const res = ctx.res;
+      const body = { hello: "world" };
+      return { ...ctx, res: { ...res, body } };
+    },
+  ));
 
   pipe.use(corser);
-  console.log("--- given", given);
   const final = await pipe.execute(Object.freeze(given));
-  console.log("--- given", given);
-  console.log("--- final", final);
 
-  assertEquals(given, final);
+  assertObjectMatch(final.res, {
+    headers: { cors: "*", "x-stuff": true },
+    body: {
+      hello: "world",
+    },
+  });
 });
 
 type Next<T> = (ctx: T) => Promise<T> | T;
@@ -60,8 +68,14 @@ type Middleware<T> = (
 ) => Promise<void> | void | T | Promise<T>;
 type Pipeline<T> = {
   use: (...midlewares: Middleware<T>[]) => void;
-  handler: (fn: (ctx: T) => Promise<T> | T) => void;
   execute: (context: T) => Promise<T>;
+};
+
+const helpers = {
+  toMiddleware: <T>(fn: (ctx: T) => T) =>
+    (ctx: T, next: Next<T>) => {
+      next(fn(ctx));
+    },
 };
 
 function newPipe<T>(): Pipeline<T> {
@@ -70,12 +84,6 @@ function newPipe<T>(): Pipeline<T> {
   return {
     use: (...middlewares: Middleware<T>[]) => {
       stack.push(...middlewares);
-    },
-    handler: (fn) => {
-      stack.push(async (ctx, next) => {
-        const result = await fn(ctx);
-        next(result);
-      });
     },
     execute: async (ctx: T) => {
       context = ctx;

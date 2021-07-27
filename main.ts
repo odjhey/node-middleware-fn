@@ -7,7 +7,9 @@ type Middleware<T> = (
 ) => Promise<void> | void | T | Promise<T>;
 type Pipeline<T> = {
   use: (...midlewares: Middleware<T>[]) => void;
-  getIter: () => () => { value: Maybe<Middleware<T>>; hasNext: boolean };
+  getIter: () => {
+    next: () => { middleware: Maybe<Middleware<T>>; hasNext: boolean };
+  };
 };
 
 const helpers = {
@@ -20,7 +22,7 @@ const helpers = {
 
     const iter = pipeline.getIter();
     while (true) {
-      const { value: middleware } = iter();
+      const { middleware } = iter.next();
       if (middleware) {
         await middleware(context, (ctx: T) => {
           context = ctx;
@@ -36,17 +38,18 @@ const helpers = {
 
 function create<T>(): Pipeline<T> {
   const stack: Middleware<T>[] = [];
-  let context: T;
   return {
     use: (...middlewares: Middleware<T>[]) => {
       stack.push(...middlewares);
     },
     getIter: () => {
       let prevIdx = -1;
-      return () => {
-        const hasNext = prevIdx + 1 < (stack.length - 1);
-        prevIdx++;
-        return { hasNext, value: stack[prevIdx - 1 + 1] };
+      return {
+        next: () => {
+          const hasNext = prevIdx + 1 < (stack.length - 1);
+          prevIdx++;
+          return { hasNext, middleware: stack[prevIdx - 1 + 1] };
+        },
       };
     },
   };

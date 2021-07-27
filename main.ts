@@ -1,3 +1,5 @@
+type None = undefined;
+type Maybe<T> = T | None;
 type Next<T> = (ctx: T) => Promise<T> | T;
 type Middleware<T> = (
   context: T,
@@ -5,7 +7,7 @@ type Middleware<T> = (
 ) => Promise<void> | void | T | Promise<T>;
 type Pipeline<T> = {
   use: (...midlewares: Middleware<T>[]) => void;
-  execute: (context: T) => Promise<T>;
+  getIter: () => () => { value: Maybe<Middleware<T>>; hasNext: boolean };
 };
 
 const helpers = {
@@ -13,6 +15,23 @@ const helpers = {
     (ctx: T, next: Next<T>) => {
       next(fn(ctx));
     },
+  run: async <T>(ctx: T, pipeline: Pipeline<T>) => {
+    let context = ctx;
+
+    const iter = pipeline.getIter();
+    while (true) {
+      const { value: middleware } = iter();
+      if (middleware) {
+        await middleware(context, (ctx: T) => {
+          context = ctx;
+          return context;
+        });
+      } else {
+        break;
+      }
+    }
+    return context;
+  },
 };
 
 function create<T>(): Pipeline<T> {
@@ -22,26 +41,13 @@ function create<T>(): Pipeline<T> {
     use: (...middlewares: Middleware<T>[]) => {
       stack.push(...middlewares);
     },
-    execute: async (ctx: T) => {
-      context = ctx;
+    getIter: () => {
       let prevIdx = -1;
-      const runner = async (index: number) => {
-        if (index === prevIdx) {
-          throw new Error("Problem with your middlewares error.");
-        }
-        prevIdx = index;
-        const middleware = stack[index];
-
-        if (middleware) {
-          await middleware(context, (ctx: T) => {
-            context = ctx;
-            return runner(index + 1);
-          });
-        }
-
-        return context;
+      return () => {
+        const hasNext = prevIdx + 1 < (stack.length - 1);
+        prevIdx++;
+        return { hasNext, value: stack[prevIdx - 1 + 1] };
       };
-      return await runner(0);
     },
   };
 }

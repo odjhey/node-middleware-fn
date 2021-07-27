@@ -15,7 +15,8 @@ Deno.test("test1", async () => {
   };
 
   pipe.use(adder);
-  const final = await pipe.execute(given);
+  // const final = await pipe.execute(given);
+  const final = await helpers.run(given, pipe);
 
   assertEquals(given + 10, final);
 });
@@ -35,6 +36,7 @@ Deno.test("test2", async () => {
   const pipe = create<http>();
 
   const corser = (ctx: http, next: Function) => {
+    console.log("corser", ctx);
     const res = ctx.res;
     const headers = {
       "cors": "*",
@@ -45,12 +47,54 @@ Deno.test("test2", async () => {
 
   pipe.use(helpers.toMiddleware(
     (ctx: http) => {
+      console.log("add body", ctx);
       const res = ctx.res;
       const body = { hello: "world" };
       return { ...ctx, res: { ...res, body } };
     },
   ));
 
+  pipe.use(corser);
+  // const final = await pipe.execute(Object.freeze(given));
+  const final = await helpers.run(given, pipe);
+
+  assertObjectMatch(final.res, {
+    body: {
+      hello: "world",
+    },
+    headers: { cors: "*", "x-stuff": true },
+  });
+});
+
+/*
+Deno.test("test - reject", async () => {
+  const given = {
+    req: {
+      body: {},
+      queryParams: {},
+    },
+    res: {},
+  };
+  type http = {
+    req: any;
+    res: any;
+  };
+  const pipe = create<http>();
+
+  pipe.use(helpers.toMiddleware(
+    (_ctx: http) => {
+      throw new Error("Error here");
+    },
+  ));
+
+  const corser = (ctx: http, next: Function) => {
+    const res = ctx.res;
+    const headers = {
+      "cors": "*",
+      "x-stuff": true,
+    };
+    next({ ...ctx, res: { ...res, headers } });
+  };
   pipe.use(corser);
   const final = await pipe.execute(Object.freeze(given));
 
@@ -61,3 +105,4 @@ Deno.test("test2", async () => {
     },
   });
 });
+*/

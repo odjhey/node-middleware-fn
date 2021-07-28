@@ -56,7 +56,7 @@ Deno.test("test2", async () => {
 
   pipe.use(corser);
   // const final = await pipe.execute(Object.freeze(given));
-  const final = await helpers.run(given, pipe);
+  const final = await helpers.run<http, http>(given, pipe);
 
   assertObjectMatch(final?.res, {
     body: {
@@ -95,14 +95,14 @@ Deno.test("test - reject handler", async () => {
     next({ ...ctx, res: { ...res, headers } });
   };
   pipe.use(corser);
-  const final = await helpers.run(given, pipe, (e) => {
+  const final = await helpers.run<http, http>(given, pipe, (e) => {
     return { req: {}, res: {} };
   });
 
   assertObjectMatch(final?.res, {});
 });
 
-Deno.test("test - reject handler should not be called", async () => {
+Deno.test("test - endHandler should not be called", async () => {
   const given = {
     req: {
       body: { payload: "1" },
@@ -138,11 +138,11 @@ Deno.test("test - reject handler should not be called", async () => {
 
   pipe.use(corser);
 
-  const final = await helpers.run(given, pipe, (e) => {
-    return { req: {}, res: {} };
-  }) as http;
+  const final = await helpers.run<http, http>(given, pipe, (e, ctx) => {
+    return ctx;
+  });
 
-  assertObjectMatch(final, {
+  assertObjectMatch(final || {}, {
     req: { body: { payload: "1" } },
     res: {
       headers: { cors: "*" },

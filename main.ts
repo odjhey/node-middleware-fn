@@ -18,10 +18,10 @@ const helpers = {
     (ctx: T, next: Next<T>) => {
       next(fn(ctx));
     },
-  run: async <T>(
+  run: async <T, Result>(
     ctx: T,
     pipeline: Pipeline<T>,
-    errHandler?: (e: Error) => T | Promise<T> | void | Promise<void>,
+    endHandler?: (e: Maybe<Error>, ctx?: T) => Maybe<Promise<Result> | Result>
   ) => {
     try {
       let context = ctx;
@@ -37,10 +37,13 @@ const helpers = {
           break;
         }
       }
-      return context;
+      if(endHandler){
+        return await endHandler(undefined, context);
+      }
+      return context
     } catch (e) {
-      if (errHandler) {
-        return await errHandler(e);
+      if (endHandler) {
+        return await endHandler(e);
       }
       throw e;
     }

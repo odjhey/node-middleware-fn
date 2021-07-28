@@ -9,9 +9,9 @@ Deno.test("test1", async () => {
   const given = 1;
   const pipe = create<number>();
 
-  const adder = (ctx: number, next: any) => {
-    ctx = ctx + 10;
-    next(ctx);
+  const adder = (state: number, next: any) => {
+    state = state + 10;
+    next(state);
   };
 
   pipe.use(adder);
@@ -35,22 +35,22 @@ Deno.test("test2", async () => {
   };
   const pipe = create<http>();
 
-  const corser = (ctx: http, next: Function) => {
-    console.log("corser", ctx);
-    const res = ctx.res;
+  const corser = (state: http, next: Function) => {
+    console.log("corser", state);
+    const res = state.res;
     const headers = {
       "cors": "*",
       "x-stuff": true,
     };
-    next({ ...ctx, res: { ...res, headers } });
+    next({ ...state, res: { ...res, headers } });
   };
 
   pipe.use(helpers.toMiddleware(
-    (ctx: http) => {
-      console.log("add body", ctx);
-      const res = ctx.res;
+    (state: http) => {
+      console.log("add body", state);
+      const res = state.res;
       const body = { hello: "world" };
-      return { ...ctx, res: { ...res, body } };
+      return { ...state, res: { ...res, body } };
     },
   ));
 
@@ -81,18 +81,18 @@ Deno.test("test - reject handler", async () => {
   const pipe = create<http>();
 
   pipe.use(helpers.toMiddleware(
-    (_ctx: http) => {
+    (_state: http) => {
       throw new Error("Error here");
     },
   ));
 
-  const corser = (ctx: http, next: Function) => {
-    const res = ctx.res;
+  const corser = (state: http, next: Function) => {
+    const res = state.res;
     const headers = {
       "cors": "*",
       "x-stuff": true,
     };
-    next({ ...ctx, res: { ...res, headers } });
+    next({ ...state, res: { ...res, headers } });
   };
   pipe.use(corser);
   const final = await helpers.run<http, http>(given, pipe, (e) => {
@@ -117,29 +117,29 @@ Deno.test("test - endHandler should not be called", async () => {
   const pipe = create<http>();
 
   pipe.use(helpers.toMiddleware(
-    (ctx: http) => {
+    (state: http) => {
       try {
         throw new Error("Error here");
       } catch (e) {
         console.log(e.message);
-        return ctx;
+        return state;
       }
     },
   ));
 
-  const corser = (ctx: http, next: Function) => {
-    const res = ctx.res;
+  const corser = (state: http, next: Function) => {
+    const res = state.res;
     const headers = {
       "cors": "*",
       "x-stuff": true,
     };
-    next({ ...ctx, res: { ...res, headers } });
+    next({ ...state, res: { ...res, headers } });
   };
 
   pipe.use(corser);
 
-  const final = await helpers.run<http, http>(given, pipe, (e, ctx) => {
-    return ctx;
+  const final = await helpers.run<http, http>(given, pipe, (e, state) => {
+    return state;
   });
 
   assertObjectMatch(final || {}, {

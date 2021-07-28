@@ -18,10 +18,10 @@ const helpers = {
     (state: T, next: Next<T>) => {
       next(fn(state));
     },
-  run: async <T, Result>(
+  run: async <T, I, Result>(
     state: T,
     pipeline: Pipeline<T>,
-    endHandler?: (e: Maybe<Error>, state: T) => Promise<Result> | Result
+    endHandler?: (e: Maybe<Error>, state: I | T) => Promise<Result> | Result,
   ) => {
     try {
       let newState = state;
@@ -37,10 +37,10 @@ const helpers = {
           break;
         }
       }
-      if(endHandler){
+      if (endHandler) {
         return await endHandler(undefined, newState);
       }
-      return newState
+      return newState;
     } catch (e) {
       if (endHandler) {
         return await endHandler(e, state);

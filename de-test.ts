@@ -23,7 +23,7 @@ Deno.test("de test", async () => {
     next({ ...state, payload });
   });
 
-  const res = await helpers.run<Event<string>, Response<string>>(
+  const res = await helpers.run<Event<string>, Event<string>, Response<string>>(
     {
       queryParams: [],
       payload: "",
@@ -66,7 +66,7 @@ Deno.test("de test - err", async () => {
     throw new Error("Forced err.");
   });
 
-  const res = await helpers.run<Event<string>, Response<string>>(
+  const res = await helpers.run<Event<string>, Event<string>, Response<string>>(
     {
       queryParams: [],
       payload: "",
@@ -106,14 +106,25 @@ Deno.test("de test - body parser", async () => {
     next({ ...state, payload: objPayload });
   }
 
-  const pipe = create<Event<string>>();
+  function appender(state: Event<{ hello: string }>, next: Function) {
+    const { payload } = state;
+    const newPayload = { hello: `${payload.hello}-yaharu!` };
+    next({ ...state, payload: newPayload });
+  }
+
+  const pipe = create<Event<string | any>>();
 
   pipe.use(bodyParser);
+  pipe.use(appender);
 
   const givenPayload = JSON.stringify({ hello: "World" });
 
-  // FIX: this type is lying
-  const res = await helpers.run<Event<string>, Response<string>>(
+  // FIX: this type is lying - maybe have to type chain, is that even possible?
+  const res = await helpers.run<
+    Event<string>,
+    Event<{ hello: string }>,
+    Response<string>
+  >(
     {
       queryParams: [],
       payload: givenPayload,
@@ -126,10 +137,14 @@ Deno.test("de test - body parser", async () => {
       return {
         statusCode: 200,
         headers: [],
-        body: state.payload,
+        body: JSON.stringify(state.payload),
       };
     },
   );
 
-  assertEquals(res, { statusCode: 200, headers: [], body: { hello: "World" } });
+  assertEquals(res, {
+    statusCode: 200,
+    headers: [],
+    body: JSON.stringify({ hello: "World-yaharu!" }),
+  });
 });

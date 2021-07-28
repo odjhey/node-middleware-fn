@@ -18,9 +18,9 @@ Deno.test("de test", async () => {
   };
 
   const pipe = create<Event<string>>();
-  pipe.use((ctx, next) => {
+  pipe.use((state, next) => {
     const payload = "yow";
-    next({ ...ctx, payload });
+    next({ ...state, payload });
   });
 
   const res = await helpers.run<Event<string>, Response<string>>(
@@ -29,14 +29,14 @@ Deno.test("de test", async () => {
       payload: "",
     },
     pipe,
-    (err, ctx) => {
+    (err, state) => {
       if (err) {
         return { statusCode: 500, headers: [], body: "" };
       }
       return {
         statusCode: 200,
         headers: [],
-        body: ctx.payload,
+        body: state.payload,
       };
     },
   );
@@ -58,11 +58,11 @@ Deno.test("de test - err", async () => {
   };
 
   const pipe = create<Event<string>>();
-  pipe.use((ctx, next) => {
+  pipe.use((state, next) => {
     const payload = "yow";
-    next({ ...ctx, payload });
+    next({ ...state, payload });
   });
-  pipe.use((_ctx, _next) => {
+  pipe.use((_state, _next) => {
     throw new Error("Forced err.");
   });
 
@@ -72,14 +72,14 @@ Deno.test("de test - err", async () => {
       payload: "",
     },
     pipe,
-    (err, ctx) => {
+    (err, state) => {
       if (err) {
         return { statusCode: 500, headers: [], body: err.message };
       }
       return {
         statusCode: 200,
         headers: [],
-        body: ctx.payload,
+        body: state.payload,
       };
     },
   );
@@ -100,10 +100,10 @@ Deno.test("de test - body parser", async () => {
     body: T;
   };
 
-  function bodyParser(ctx: Event<string>, next: Function) {
-    const { payload } = ctx;
+  function bodyParser(state: Event<string>, next: Function) {
+    const { payload } = state;
     const objPayload = JSON.parse(payload);
-    next({ ...ctx, payload: objPayload });
+    next({ ...state, payload: objPayload });
   }
 
   const pipe = create<Event<string>>();
@@ -119,14 +119,14 @@ Deno.test("de test - body parser", async () => {
       payload: givenPayload,
     },
     pipe,
-    (err, ctx) => {
+    (err, state) => {
       if (err) {
         return { statusCode: 500, headers: [], body: "" };
       }
       return {
         statusCode: 200,
         headers: [],
-        body: ctx.payload,
+        body: state.payload,
       };
     },
   );

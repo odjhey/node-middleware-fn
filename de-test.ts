@@ -86,3 +86,50 @@ Deno.test("de test - err", async () => {
 
   assertEquals(res, { statusCode: 500, headers: [], body: "Forced err." });
 });
+
+Deno.test("de test - body parser", async () => {
+  type None = undefined;
+  type Event<T> = {
+    queryParams: Record<string, string>[];
+    payload: T;
+  };
+
+  type Response<T> = {
+    statusCode: number;
+    headers: Record<string, string>[];
+    body: T;
+  };
+
+  function bodyParser(ctx: Event<string>, next: Function) {
+    const { payload } = ctx;
+    const objPayload = JSON.parse(payload);
+    next({ ...ctx, payload: objPayload });
+  }
+
+  const pipe = create<Event<string>>();
+
+  pipe.use(bodyParser);
+
+  const givenPayload = JSON.stringify({ hello: "World" });
+
+  // FIX: this type is lying
+  const res = await helpers.run<Event<string>, Response<string>>(
+    {
+      queryParams: [],
+      payload: givenPayload,
+    },
+    pipe,
+    (err, ctx) => {
+      if (err) {
+        return { statusCode: 500, headers: [], body: "" };
+      }
+      return {
+        statusCode: 200,
+        headers: [],
+        body: ctx.payload,
+      };
+    },
+  );
+
+  assertEquals(res, { statusCode: 200, headers: [], body: { hello: "World" } });
+});

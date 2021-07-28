@@ -1,9 +1,9 @@
 type None = undefined;
 type Maybe<T> = T | None;
 
-type Next<T> = (ctx: T) => Promise<T> | T;
+type Next<T> = (state: T) => Promise<T> | T;
 type Middleware<T> = (
-  context: T,
+  state: T,
   next: Next<T>,
 ) => Promise<void> | void | T | Promise<T>;
 type Pipeline<T> = {
@@ -14,36 +14,36 @@ type Pipeline<T> = {
 };
 
 const helpers = {
-  toMiddleware: <T>(fn: (ctx: T) => T) =>
-    (ctx: T, next: Next<T>) => {
-      next(fn(ctx));
+  toMiddleware: <T>(fn: (state: T) => T) =>
+    (state: T, next: Next<T>) => {
+      next(fn(state));
     },
   run: async <T, Result>(
-    ctx: T,
+    state: T,
     pipeline: Pipeline<T>,
-    endHandler?: (e: Maybe<Error>, ctx: T) => Promise<Result> | Result
+    endHandler?: (e: Maybe<Error>, state: T) => Promise<Result> | Result
   ) => {
     try {
-      let context = ctx;
+      let newState = state;
       const iter = pipeline.getIter();
       while (true) {
         const { middleware } = iter.next();
         if (middleware) {
-          await middleware(context, (ctx: T) => {
-            context = ctx;
-            return context;
+          await middleware(newState, (state: T) => {
+            newState = state;
+            return state;
           });
         } else {
           break;
         }
       }
       if(endHandler){
-        return await endHandler(undefined, context);
+        return await endHandler(undefined, newState);
       }
-      return context
+      return newState
     } catch (e) {
       if (endHandler) {
-        return await endHandler(e, ctx);
+        return await endHandler(e, state);
       }
       throw e;
     }

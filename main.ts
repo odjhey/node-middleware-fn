@@ -21,7 +21,7 @@ const helpers = {
   run: async <T, Result>(
     ctx: T,
     pipeline: Pipeline<T>,
-    endHandler?: (e: Maybe<Error>, ctx?: T) => Maybe<Promise<Result> | Result>
+    endHandler?: (e: Maybe<Error>, ctx: T) => Promise<Result> | Result
   ) => {
     try {
       let context = ctx;
@@ -43,7 +43,7 @@ const helpers = {
       return context
     } catch (e) {
       if (endHandler) {
-        return await endHandler(e);
+        return await endHandler(e, ctx);
       }
       throw e;
     }

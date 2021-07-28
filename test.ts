@@ -58,7 +58,7 @@ Deno.test("test2", async () => {
   // const final = await pipe.execute(Object.freeze(given));
   const final = await helpers.run<http, http>(given, pipe);
 
-  assertObjectMatch(final?.res, {
+  assertObjectMatch(final.res, {
     body: {
       hello: "world",
     },
@@ -99,7 +99,7 @@ Deno.test("test - reject handler", async () => {
     return { req: {}, res: {} };
   });
 
-  assertObjectMatch(final?.res, {});
+  assertObjectMatch(final.res, {});
 });
 
 Deno.test("test - endHandler should not be called", async () => {

@@ -31,3 +31,4 @@ like should the `bodyParser` update the `ctx.req` or add to the `state`
 
 ## Musings
 - [ ] remove `Next` and change to `ctx` where `ctx` has `ctx#next`
+- [ ] try chain, ie, pipe.use().use().use().use(), this way, we can infer types

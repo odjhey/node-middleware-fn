@@ -4,7 +4,7 @@
 - https://ramdajs.com/docs/#compose or pipe
 - https://gcanti.github.io/fp-ts/modules/function.ts.html#flow
 - https://sanctuary.js.org/#compose or pipe	
-
+- or just plain Promises, after all, this looks like just a bad monad implementation
 
 ## Reference (WIP)
 So you're still interested eh? See below.

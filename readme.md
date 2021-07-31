@@ -1,5 +1,6 @@
 # Do not use this, not sure what value it brings yet over below libs that have better implementation and more adoption
 ## Use these instead
+- https://www.npmjs.com/package/middy
 - https://github.com/wooorm/trough
 - https://ramdajs.com/docs/#compose or pipe
 - https://gcanti.github.io/fp-ts/modules/function.ts.html#flow
